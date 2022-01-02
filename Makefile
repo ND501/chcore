@@ -6,7 +6,7 @@ endif
 LAB := 2
 # try to generate a unique GDB port
 GDBPORT	:= 1234
-QEMUOPTS = -machine raspi3 -serial null -serial mon:stdio -m size=1G -kernel $(BUILD_DIR)/kernel.img -gdb tcp::1234
+QEMUOPTS = -machine raspi3 -serial null -serial mon:stdio -m size=1G -kernel $(BUILD_DIR)/kernel.img -gdb tcp::1234 -nographic
 IMAGES = $(BUILD_DIR)/kernel.img
 
 all: build
