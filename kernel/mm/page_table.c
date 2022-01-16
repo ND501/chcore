@@ -162,9 +162,30 @@ static int get_next_ptp(ptp_t * cur_ptp, u32 level, vaddr_t va,
 int query_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t * pa, pte_t ** entry)
 {
 	// <lab2>
+	int ret, level;
+	pte_t* pte;
+	ptp_t* cur_ptp = (ptp_t*)pgtbl;
+	ptp_t* next_ptp;
 
+	for (level = 0; level < 4; ++level) {
+		/* do not allocate */
+		ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, false);
+		cur_ptp = next_ptp;
+		if (ret != NORMAL_PTP) {
+			break;
+		}
+	}
+
+	if (ret == NORMAL_PTP) {
+		/* should support huge page later */
+		*pa = virt_to_phys((vaddr_t)cur_ptp) + GET_VA_OFFSET_L3(va);
+		return 0;
+	}
+	else {
+		/* should never be 1 or others */
+		return ret;
+	}
 	// </lab2>
-	return 0;
 }
 
 /*
@@ -186,7 +207,31 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 		       size_t len, vmr_prop_t flags)
 {
 	// <lab2>
+	/* use default 4kB page size to allocate and map, should support huge page later */
+	for (const vaddr_t end_va = va + len; va < end_va; va += PAGE_SIZE, pa += PAGE_SIZE) {
+		int ret, level;
+		pte_t* pte;
+		ptp_t* cur_ptp = (ptp_t*)pgtbl;
+		ptp_t* next_ptp;
 
+		for (level = 0; level < 3; ++level) {
+			ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, true);
+			if (ret < 0) {
+				return ret;
+			}
+			else if (ret == BLOCK_PTP) {
+				return -1;
+			}
+			cur_ptp = next_ptp;
+		}
+
+		pte = &(cur_ptp->ent[GET_L3_INDEX(va)]);
+		pte->l3_page.is_valid = 1;
+		pte->l3_page.is_page = 1;
+		pte->l3_page.pfn = pa >> PAGE_SHIFT;
+		set_pte_flags(pte, flags, KERNEL_PTE);
+	}
+	flush_tlb();
 	// </lab2>
 	return 0;
 }
@@ -207,7 +252,27 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
 {
 	// <lab2>
+	/* use default 4kB page size to allocate and map, should support huge page later */
+	for (const vaddr_t end_va = va + len; va < end_va; va += PAGE_SIZE) {
+		int ret, level;
+		pte_t* pte;
+		ptp_t* cur_ptp = (ptp_t*)pgtbl;
+		ptp_t* next_ptp;
 
+		for (level = 0; level < 4; ++level) {
+			ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, false);
+			if (ret < 0) {
+				return ret;
+			}
+			else if (ret == BLOCK_PTP) {
+				return -1;
+			}
+			cur_ptp = next_ptp;
+		}
+
+		pte->pte = 0;
+	}
+	flush_tlb();
 	// </lab2>
 	return 0;
 }
