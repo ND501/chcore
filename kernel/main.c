@@ -67,6 +67,8 @@ void main(void *addr)
 	kernel_lock_init();
 	kinfo("[ChCore] lock init finished\n");
 
+	lock_kernel();
+
 	/* Init scheduler with specified policy. */
 	sched_init(&rr);
 	kinfo("[ChCore] sched init finished\n");
@@ -112,6 +114,7 @@ void secondary_start(void)
 	 * Inform the BSP at last to start cpu one by one
 	 * Hints: use cpu_status
 	*/
+	cpu_status[smp_get_cpu_id()] = cpu_run;
 
 #ifndef TEST
 	run_test(false);
@@ -121,6 +124,7 @@ void secondary_start(void)
 	 *  Lab4
 	 *  Acquire the big kernel lock
 	 */
+	lock_kernel();
 
 	/* Where the AP first returns to the user mode */
 	sched();
