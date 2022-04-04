@@ -81,6 +81,7 @@ const void *syscall_table[NR_SYSCALL] = {
 	 * Add syscall
 	 */
 	[SYS_get_cpu_id] = sys_get_cpu_id,
+	[SYS_ipc_reg_call] = sys_ipc_reg_call,
 
 	[SYS_create_pmos] = sys_create_pmos,
 	[SYS_map_pmos] = sys_map_pmos,
